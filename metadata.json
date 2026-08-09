@@ -1,0 +1,11 @@
+{
+  "name": "Repair Hub",
+  "description": "Comprehensive electronics repair platform for phones, laptops, appliances, and home visits with live tracking, technician management, and AI diagnostics.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

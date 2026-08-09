@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@layer utilities {
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.35s ease-out forwards;
+  }
+
+  @keyframes spinSlow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-spin-slow {
+    animation: spinSlow 12s linear infinite;
+  }
+}
+
+/* Custom Print Styles for Invoice Modal */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #invoice-modal, #invoice-modal * {
+    visibility: visible;
+  }
+  #invoice-modal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}
