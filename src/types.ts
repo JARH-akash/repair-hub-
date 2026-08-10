@@ -319,12 +319,65 @@ export interface DevSession {
 }
 
 export interface DevAIInsight {
-  timestamp: string;
-  threatLevel: 'low' | 'medium' | 'high';
-  securitySummary: string;
-  revenueForecastNext30Days: number;
-  technicianEfficiencyScore: number;
-  recommendedActions: string[];
-  vulnerabilitiesDetected: { title: string; risk: string; remediation: string }[];
+  id?: string;
+  category?: string;
+  title?: string;
+  summary?: string;
+  recommendation?: string;
+  confidenceScore?: number;
+  impactLevel?: 'low' | 'medium' | 'high' | 'critical';
+  generatedAt?: string;
+  timestamp?: string;
+  threatLevel?: string;
+  securitySummary?: string;
+  revenueForecastNext30Days?: number;
+  technicianEfficiencyScore?: number;
+  recommendedActions?: string[];
+  vulnerabilitiesDetected?: Array<{ title: string; risk: string; remediation: string }>;
+}
+
+export interface GSCQueryPerformance {
+  query: string;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+}
+
+export interface GSCCrawlError {
+  url: string;
+  errorType: string;
+  detectedDate: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
+export interface GSCAdminData {
+  connected: boolean;
+  siteUrl: string;
+  accountEmail: string;
+  connectedAt?: string;
+  lastSync?: string;
+  authMethod: 'OAuth2' | 'ServiceAccount' | 'API_Key';
+  sitemapSubmitted: boolean;
+  sitemapUrl: string;
+  indexingStatus: {
+    totalIndexedPages: number;
+    excludedPages: number;
+    sitemapStatus: string;
+    lastCrawlDate: string;
+    mobileUsabilityScore: number;
+    httpsValid: boolean;
+    crawlErrorsCount: number;
+  };
+  searchPerformance: {
+    totalClicks: number;
+    totalImpressions: number;
+    averageCtr: number;
+    averagePosition: number;
+    clicksGrowthPercent: number;
+    topQueries: GSCQueryPerformance[];
+  };
+  crawlErrors: GSCCrawlError[];
+  hasServerOAuthCredentials?: boolean;
 }
 

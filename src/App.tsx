@@ -11,7 +11,6 @@ import { InvoiceModal } from './components/InvoiceModal';
 import { AuthModal } from './components/AuthModal';
 import { AccountModal } from './components/AccountModal';
 import { DeveloperPanel } from './components/DeveloperPanel';
-import { GSCModal } from './components/GSCModal';
 import { RepairJob, UserAccount, UserRole } from './types';
 import { LanguageProvider } from './context/LanguageContext';
 
@@ -21,9 +20,6 @@ export default function App() {
   const [preFillModel, setPreFillModel] = useState<string>('');
   const [preFillProblem, setPreFillProblem] = useState<string>('');
   const [selectedInvoiceJob, setSelectedInvoiceJob] = useState<RepairJob | null>(null);
-
-  // Google Search Console Modal State
-  const [isGSCModalOpen, setIsGSCModalOpen] = useState<boolean>(false);
 
   // Hidden Developer Panel Modal State
   const [isDevPanelOpen, setIsDevPanelOpen] = useState<boolean>(false);
@@ -198,13 +194,6 @@ export default function App() {
         <Footer
           onNavigateSection={scrollToSection}
           onOpenAIDiagnostics={handleOpenAIDiagnostics}
-          onOpenGSCModal={() => setIsGSCModalOpen(true)}
-        />
-
-        {/* Google Search Console Modal */}
-        <GSCModal
-          isOpen={isGSCModalOpen}
-          onClose={() => setIsGSCModalOpen(false)}
         />
 
         {/* Invoice Modal */}

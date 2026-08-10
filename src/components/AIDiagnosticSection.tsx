@@ -75,7 +75,8 @@ export const AIDiagnosticSection: React.FC<AIDiagnosticSectionProps> = ({ onPreF
       setResult(diagResult);
     } catch (err: any) {
       console.error('AI Diagnosis Error:', err);
-      setError(err?.message || 'Failed to complete AI diagnosis. Please try again.');
+      setResult(null);
+      setError(err?.message || 'AI Diagnostic service is unavailable. Please check API key configuration or try again.');
     } finally {
       setLoading(false);
     }

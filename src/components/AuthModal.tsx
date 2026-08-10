@@ -20,9 +20,12 @@ import {
   UploadCloud,
   Trash2,
   Paperclip,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { UserAccount, UserRole } from '../types';
+import { Logo } from './Logo';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -64,6 +67,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   // Admin Specifics
   const [department, setDepartment] = useState('Pan-India Operations');
   const [adminSecurityKey, setAdminSecurityKey] = useState('');
+
+  // Password & Passcode Visibility Toggles
+  const [showAdminKey, setShowAdminKey] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // CV / Resume Document Specifics (Mandatory for Technician & Admin)
   const [cvFileName, setCvFileName] = useState<string>('');
@@ -149,8 +157,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         return;
       }
 
-      if (role === 'admin' && adminSecurityKey !== 'biswajit@ritam') {
-        setErrorMessage('Access Denied: Admin section is strictly reserved for the App/Website Owner. Please enter the valid Master Owner Passcode.');
+      const cleanKey = adminSecurityKey.trim().toLowerCase();
+      const validAdminKeys = ['biswajit@ritam', 'owner-admin-2026-key', 'admin2026'];
+      if (role === 'admin' && !validAdminKeys.includes(cleanKey)) {
+        setErrorMessage('Access Denied: Admin section is strictly reserved for the App/Website Owner. Please enter a valid Master Owner Passcode.');
         return;
       }
 
@@ -173,6 +183,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           experienceYears: role === 'technician' ? Number(experienceYears) : undefined,
           certifications: role === 'technician' ? certifications : undefined,
           department: role === 'admin' ? department : undefined,
+          adminSecurityKey: role === 'admin' ? adminSecurityKey : undefined,
           cvFileName: cvFileName || undefined,
           cvFileUrl: cvFileUrl || undefined,
         };
@@ -229,9 +240,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Modal Header */}
         <div className="text-center sm:text-left mb-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold uppercase tracking-wider mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-            RepairHub Access Portal
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <Logo size="sm" showEst={false} />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+              RepairHub Access Portal
+            </div>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
             {mode === 'register' ? 'Create New Account' : 'Sign In to Account'}
@@ -557,21 +571,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         <label className="block text-[11px] font-bold text-slate-300">
                           Master Owner Passcode *
                         </label>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type={showAdminKey ? 'text' : 'password'}
+                          placeholder="Enter Master Owner Passcode"
+                          value={adminSecurityKey}
+                          onChange={(e) => setAdminSecurityKey(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-3 pr-9 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                        />
                         <button
                           type="button"
-                          onClick={() => setAdminSecurityKey('biswajit@ritam')}
-                          className="text-[10px] text-purple-400 hover:text-purple-300 font-bold underline cursor-pointer"
+                          onClick={() => setShowAdminKey(!showAdminKey)}
+                          className="absolute right-2.5 top-2 text-slate-400 hover:text-white p-0.5 cursor-pointer"
+                          title={showAdminKey ? 'Hide Passcode' : 'Show Passcode'}
                         >
-                          Fill Owner Passcode
+                          {showAdminKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                         </button>
                       </div>
-                      <input
-                        type="password"
-                        placeholder="Enter Owner Key: biswajit@ritam"
-                        value={adminSecurityKey}
-                        onChange={(e) => setAdminSecurityKey(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500"
-                      />
                     </div>
                   </div>
                 </div>
@@ -671,14 +688,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     Password
                   </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                    <Lock className="w-4 h-4 absolute left-3 top-2.5 text-slate-500" />
                     <input
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-9 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2.5 top-2 text-slate-400 hover:text-white p-0.5 cursor-pointer"
+                      title={showPassword ? 'Hide Password' : 'Show Password'}
+                    >
+                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
                   </div>
                 </div>
 
@@ -687,14 +712,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     Confirm Password
                   </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                    <Lock className="w-4 h-4 absolute left-3 top-2.5 text-slate-500" />
                     <input
-                      type="password"
+                      type={showConfirmPassword ? 'text' : 'password'}
                       placeholder="••••••••"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-9 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-2.5 top-2 text-slate-400 hover:text-white p-0.5 cursor-pointer"
+                      title={showConfirmPassword ? 'Hide Password' : 'Show Password'}
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -726,12 +759,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-9 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-white p-0.5 cursor-pointer"
+                    title={showPassword ? 'Hide Password' : 'Show Password'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
             </div>

@@ -20,6 +20,8 @@ import {
   Sparkles,
   Building,
   Key,
+  Eye,
+  EyeOff,
   Shield,
   Clock,
   Edit3,
@@ -70,6 +72,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   const [regCerts, setRegCerts] = useState('ESD-Safe Certified Micro-Soldering Specialist');
   const [regDept, setRegDept] = useState('Pan-India Fleet & Customer Operations');
   const [regSecurityKey, setRegSecurityKey] = useState('');
+  const [showRegSecurityKey, setShowRegSecurityKey] = useState(false);
   const [regCvName, setRegCvName] = useState('RepairHub_Personnel_Doc.pdf');
 
   // UI Feedback
@@ -539,15 +542,25 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 <label className="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
                   <Key className="w-3.5 h-3.5" /> Admin Security Passcode
                 </label>
-                <input
-                  type="password"
-                  value={regSecurityKey}
-                  onChange={(e) => setRegSecurityKey(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-amber-500/40 text-amber-100 text-xs focus:outline-none"
-                  placeholder="Enter Passcode (e.g. OWNER-ADMIN-2026-KEY)"
-                  required
-                  id="reg-admin-passcode"
-                />
+                <div className="relative">
+                  <input
+                    type={showRegSecurityKey ? 'text' : 'password'}
+                    value={regSecurityKey}
+                    onChange={(e) => setRegSecurityKey(e.target.value)}
+                    className="w-full pl-3.5 pr-9 py-2 rounded-xl bg-slate-950 border border-amber-500/40 text-amber-100 text-xs focus:outline-none"
+                    placeholder="Enter Admin Security Passcode"
+                    required
+                    id="reg-admin-passcode"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegSecurityKey(!showRegSecurityKey)}
+                    className="absolute right-2.5 top-2 text-amber-400 hover:text-amber-200 p-0.5 cursor-pointer"
+                    title={showRegSecurityKey ? 'Hide Passcode' : 'Show Passcode'}
+                  >
+                    {showRegSecurityKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
             )}
 

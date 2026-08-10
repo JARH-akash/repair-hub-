@@ -11,6 +11,7 @@ import {
   DevSecurityAuditLog,
   DevSession,
   DevSystemMetrics,
+  GSCAdminData,
   InventoryItem,
   RepairJob,
   SupportTicket,
@@ -407,4 +408,112 @@ export const api = {
   }> {
     return fetchJSON('/api/seo/gsc');
   },
+
+  // Admin Google Search Console Secured Methods
+  async getGSCAdminStatus(adminKey?: string, userRole?: string): Promise<GSCAdminData> {
+    const headers: Record<string, string> = {};
+    if (adminKey) headers['X-Admin-Passcode'] = adminKey;
+    if (userRole) headers['X-User-Role'] = userRole;
+    return fetchJSON<GSCAdminData>('/api/admin/gsc/status', { headers });
+  },
+
+  async connectGSCAdmin(payload: { siteUrl?: string; accountEmail?: string }, adminKey?: string, userRole?: string): Promise<{ success: boolean; message: string; data: GSCAdminData }> {
+    const headers: Record<string, string> = {};
+    if (adminKey) headers['X-Admin-Passcode'] = adminKey;
+    if (userRole) headers['X-User-Role'] = userRole;
+    return fetchJSON('/api/admin/gsc/connect', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers,
+    });
+  },
+
+  async disconnectGSCAdmin(adminKey?: string, userRole?: string): Promise<{ success: boolean; message: string; data: GSCAdminData }> {
+    const headers: Record<string, string> = {};
+    if (adminKey) headers['X-Admin-Passcode'] = adminKey;
+    if (userRole) headers['X-User-Role'] = userRole;
+    return fetchJSON('/api/admin/gsc/disconnect', {
+      method: 'POST',
+      headers,
+    });
+  },
+
+  async syncGSCAdmin(adminKey?: string, userRole?: string): Promise<{ success: boolean; message: string; data: GSCAdminData }> {
+    const headers: Record<string, string> = {};
+    if (adminKey) headers['X-Admin-Passcode'] = adminKey;
+    if (userRole) headers['X-User-Role'] = userRole;
+    return fetchJSON('/api/admin/gsc/sync', {
+      method: 'POST',
+      headers,
+    });
+  },
+
+  async getGSCAdminAuthUrl(adminKey?: string, userRole?: string): Promise<{ configured: boolean; authUrl?: string; redirectUri: string; message?: string }> {
+    const headers: Record<string, string> = {};
+    if (adminKey) headers['X-Admin-Passcode'] = adminKey;
+    if (userRole) headers['X-User-Role'] = userRole;
+    return fetchJSON('/api/admin/gsc/auth-url', { headers });
+  },
+
+  // Developer Google Search Console Technical Methods
+  async getDevGscConfig(token: string): Promise<{
+    clientIdMasked: string;
+    hasClientSecret: boolean;
+    serviceAccountEmail: string;
+    serviceAccountConfigured: boolean;
+    lastTokenRefresh: string;
+    redirectUri: string;
+    apiQuotas: {
+      dailyQueriesUsed: number;
+      dailyQueriesLimit: number;
+      indexingBatchQuotaUsed: number;
+      indexingBatchQuotaLimit: number;
+    };
+    scopes: string[];
+    status: string;
+    environment: string;
+  }> {
+    return fetchJSON('/api/dev/gsc/config', undefined, token);
+  },
+
+  async testDevGscConnection(token: string): Promise<{
+    success: boolean;
+    timestamp: string;
+    latencyMs: number;
+    endpointCheck: Record<string, string>;
+    message: string;
+  }> {
+    return fetchJSON('/api/dev/gsc/test-connection', { method: 'POST' }, token);
+  },
+
+  async updateDevGscCredentials(
+    token: string,
+    payload: { clientId?: string; clientSecret?: string; serviceAccountEmail?: string }
+  ): Promise<{ success: boolean; message: string; data: any }> {
+    return fetchJSON('/api/dev/gsc/update-credentials', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, token);
+  },
+
+  async inspectDevUrl(token: string, url: string): Promise<any> {
+    return fetchJSON('/api/dev/gsc/url-inspection', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    }, token);
+  },
+
+  async reindexDevSitemap(token: string, url: string): Promise<{
+    success: boolean;
+    message: string;
+    targetUrl: string;
+    queuedAt: string;
+    indexingBatchQuotaRemaining: number;
+  }> {
+    return fetchJSON('/api/dev/gsc/sitemap-reindex', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    }, token);
+  },
 };
+

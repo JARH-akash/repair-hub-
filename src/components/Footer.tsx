@@ -1,15 +1,14 @@
 import React from 'react';
-import { Wrench, ShieldCheck, Phone, Mail, MapPin, Sparkles, Heart, Search, Clock } from 'lucide-react';
+import { Wrench, ShieldCheck, Phone, Mail, MapPin, Sparkles, Heart, Clock } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { Logo } from './Logo';
 
 interface FooterProps {
   onNavigateSection: (sectionId: string) => void;
   onOpenAIDiagnostics: () => void;
-  onOpenGSCModal?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onNavigateSection, onOpenAIDiagnostics, onOpenGSCModal }) => {
+export const Footer: React.FC<FooterProps> = ({ onNavigateSection, onOpenAIDiagnostics }) => {
   const { t } = useLanguage();
 
   return (
@@ -53,9 +52,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateSection, onOpenAIDiagn
             <h4 className="text-white font-extrabold uppercase tracking-wider text-xs mb-3">Platform Features</h4>
             <ul className="space-y-2">
               <li><button onClick={onOpenAIDiagnostics} className="hover:text-blue-300 text-blue-400 font-bold flex items-center gap-1 cursor-pointer"><Sparkles className="w-3 h-3" /> Gemini AI Diagnostics</button></li>
-              {onOpenGSCModal && (
-                <li><button onClick={onOpenGSCModal} className="hover:text-cyan-300 text-cyan-400 font-bold flex items-center gap-1 cursor-pointer" id="footer-gsc-btn"><Search className="w-3 h-3 text-cyan-400" /> Google Search Console & SEO</button></li>
-              )}
               <li><button onClick={() => onNavigateSection('tracking')} className="hover:text-white cursor-pointer">Live Technician Map</button></li>
               <li><button onClick={() => onNavigateSection('portals')} className="hover:text-white cursor-pointer">Customer Warranty Wallet</button></li>
               <li><button onClick={() => onNavigateSection('portals')} className="hover:text-white cursor-pointer">Technician Dispatch Desk</button></li>
@@ -81,18 +77,18 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateSection, onOpenAIDiagn
           <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 sm:p-6 text-center shadow-xl shadow-blue-950/20 max-w-2xl mx-auto transition-all duration-300 hover:border-slate-700/80">
             {/* Credits layout */}
             <div className="flex flex-col items-center justify-center gap-2.5 text-center">
-              {/* First line: Primary highlight */}
-              <p className="text-[16px] font-bold text-blue-400 tracking-tight">
+              {/* First line: Developer Credit */}
+              <p className="text-[15px] font-bold text-blue-400 tracking-tight">
                 Website Developed by Akash Samanta
               </p>
 
-              {/* Second line: Remaining credits separated by bullet points */}
-              <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-slate-400">
+              {/* Second line: Remaining credits using identical text-blue-400 color */}
+              <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-blue-400 font-medium">
                 <span className="text-[13px]">Logo & Advertisement by Biswajit Mandi</span>
-                <span className="text-slate-600 select-none">•</span>
+                <span className="text-blue-400/50 select-none">•</span>
                 <span className="text-[13px]">Ideas, Helpline by Ritam Dutta</span>
-                <span className="text-slate-600 select-none">•</span>
-                <span className="text-[18px] font-medium">Funded by ABR Group</span>
+                <span className="text-blue-400/50 select-none">•</span>
+                <span className="text-[13px] font-bold">Funded by ABR Group</span>
               </div>
             </div>
 

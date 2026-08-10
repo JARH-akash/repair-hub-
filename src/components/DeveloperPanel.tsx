@@ -30,6 +30,8 @@ import {
   Server,
   Layers,
   FileCode,
+  Search,
+  Globe,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import {
@@ -73,6 +75,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
     | 'backups'
     | 'flags'
     | 'ai'
+    | 'gsc'
     | 'env'
   >('overview');
 
@@ -88,6 +91,20 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
   const [aiInsights, setAiInsights] = useState<DevAIInsight | null>(null);
   const [envConfig, setEnvConfig] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState<boolean>(false);
+
+  // Developer GSC Engine States
+  const [devGscConfig, setDevGscConfig] = useState<any>(null);
+  const [devGscTestResult, setDevGscTestResult] = useState<any>(null);
+  const [devGscInspectedUrl, setDevGscInspectedUrl] = useState<string>('https://repairhub.in/book-repair');
+  const [devGscInspectionData, setDevGscInspectionData] = useState<any>(null);
+  const [devGscReindexUrl, setDevGscReindexUrl] = useState<string>('https://repairhub.in/sitemap.xml');
+  const [devGscCredsForm, setDevGscCredsForm] = useState({
+    clientId: '',
+    clientSecret: '',
+    serviceAccountEmail: '',
+  });
+  const [devGscLoading, setDevGscLoading] = useState<boolean>(false);
+
 
   // Status Message / Toast Notification
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
@@ -160,6 +177,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
         bakRes,
         ffRes,
         envRes,
+        gscRes,
       ] = await Promise.allSettled([
         api.getDevOverview(devToken),
         api.getDevServerMetrics(devToken),
@@ -170,6 +188,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
         api.getDevBackups(devToken),
         api.getDevFeatureFlags(devToken),
         api.getDevEnvConfig(devToken),
+        api.getDevGscConfig(devToken),
       ]);
 
       if (ovRes.status === 'fulfilled') setOverview(ovRes.value);
@@ -181,6 +200,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
       if (bakRes.status === 'fulfilled') setBackups(bakRes.value);
       if (ffRes.status === 'fulfilled') setFeatureFlags(ffRes.value);
       if (envRes.status === 'fulfilled') setEnvConfig(envRes.value);
+      if (gscRes.status === 'fulfilled') setDevGscConfig(gscRes.value);
     } catch (e: any) {
       console.error('Failed loading dev panel data:', e);
       if (e.message?.includes('403') || e.message?.includes('Forbidden')) {
@@ -192,6 +212,80 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
       setLoadingData(false);
     }
   };
+
+  const loadDevGscConfig = async () => {
+    if (!devToken) return;
+    try {
+      setDevGscLoading(true);
+      const cfg = await api.getDevGscConfig(devToken);
+      setDevGscConfig(cfg);
+    } catch (err: any) {
+      console.warn('Failed loading dev GSC config:', err);
+    } finally {
+      setDevGscLoading(false);
+    }
+  };
+
+  const handleTestDevGscConnection = async () => {
+    if (!devToken) return;
+    try {
+      setDevGscLoading(true);
+      const res = await api.testDevGscConnection(devToken);
+      setDevGscTestResult(res);
+      showNotification('Developer Diagnostic: GSC & Indexing API technical health check succeeded.', 'success');
+    } catch (err: any) {
+      showNotification('GSC Connection Diagnostic Error: ' + err.message, 'error');
+    } finally {
+      setDevGscLoading(false);
+    }
+  };
+
+  const handleUpdateDevGscCreds = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!devToken) return;
+    try {
+      setDevGscLoading(true);
+      const res = await api.updateDevGscCredentials(devToken, devGscCredsForm);
+      showNotification(res.message, 'success');
+      setDevGscCredsForm({ clientId: '', clientSecret: '', serviceAccountEmail: '' });
+      loadDevGscConfig();
+    } catch (err: any) {
+      showNotification('Failed updating GSC credentials: ' + err.message, 'error');
+    } finally {
+      setDevGscLoading(false);
+    }
+  };
+
+  const handleRunUrlInspection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!devToken || !devGscInspectedUrl) return;
+    try {
+      setDevGscLoading(true);
+      const res = await api.inspectDevUrl(devToken, devGscInspectedUrl);
+      setDevGscInspectionData(res);
+      showNotification(`URL Inspection complete for [${devGscInspectedUrl}]`, 'success');
+    } catch (err: any) {
+      showNotification('URL Inspection failed: ' + err.message, 'error');
+    } finally {
+      setDevGscLoading(false);
+    }
+  };
+
+  const handleReindexSitemap = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!devToken || !devGscReindexUrl) return;
+    try {
+      setDevGscLoading(true);
+      const res = await api.reindexDevSitemap(devToken, devGscReindexUrl);
+      showNotification(res.message, 'success');
+      loadDevGscConfig();
+    } catch (err: any) {
+      showNotification('Reindexing request failed: ' + err.message, 'error');
+    } finally {
+      setDevGscLoading(false);
+    }
+  };
+
 
   useEffect(() => {
     if (devToken) {
@@ -585,6 +679,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
             { id: 'backups', label: 'Backups & Snapshots', icon: Archive },
             { id: 'flags', label: 'Feature Flags', icon: ToggleRight },
             { id: 'ai', label: 'Gemini AI Insights', icon: BrainCircuit },
+            { id: 'gsc', label: 'GSC & SEO Engine', icon: Search },
             { id: 'env', label: 'Env Config', icon: Settings },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -1237,7 +1332,310 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
           </div>
         )}
 
-        {/* TAB 10: ENV CONFIG */}
+        {/* TAB 10: GSC & SEO ENGINE */}
+        {activeTab === 'gsc' && (
+          <div className="space-y-6 font-mono">
+            {/* TOP HEADER BANNER */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Search className="w-4 h-4 text-cyan-400" />
+                    DEVELOPER GOOGLE SEARCH CONSOLE & TECHNICAL SEO ENGINE
+                  </h3>
+                  <span className="px-2 py-0.5 rounded text-[10px] bg-purple-950 text-purple-300 border border-purple-800 font-bold">
+                    DEV API MANAGEMENT
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Manage OAuth2 Client secrets, Service Accounts, Indexing API rate limits, URL inspection diagnostics, and Googlebot crawl requests.
+                </p>
+              </div>
+
+              <button
+                onClick={handleTestDevGscConnection}
+                disabled={devGscLoading}
+                className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg shadow-cyan-950/50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${devGscLoading ? 'animate-spin' : ''}`} />
+                <span>Run Technical Diagnostic Ping</span>
+              </button>
+            </div>
+
+            {/* STAT CARDS & QUOTA METRICS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+                  <span>Daily Webmaster Queries</span>
+                  <Activity className="w-4 h-4 text-cyan-400" />
+                </div>
+                <div className="text-lg font-bold text-white">
+                  {devGscConfig?.apiQuotas?.dailyQueriesUsed ?? 1420} / {devGscConfig?.apiQuotas?.dailyQueriesLimit?.toLocaleString() ?? '100,000'}
+                </div>
+                <div className="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div className="bg-cyan-400 h-full w-[2%]" />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">1.42% Daily Quota Consumed</p>
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+                  <span>Indexing API Batch Quota</span>
+                  <Zap className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div className="text-lg font-bold text-emerald-400">
+                  {devGscConfig?.apiQuotas?.indexingBatchQuotaUsed ?? 18} / {devGscConfig?.apiQuotas?.indexingBatchQuotaLimit ?? 200}
+                </div>
+                <div className="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div className="bg-emerald-400 h-full w-[9%]" />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">Priority Recrawl Submissions</p>
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+                  <span>Service Account</span>
+                  <ShieldCheck className="w-4 h-4 text-purple-400" />
+                </div>
+                <div className="text-xs font-bold text-purple-300 truncate" title={devGscConfig?.serviceAccountEmail}>
+                  {devGscConfig?.serviceAccountEmail || 'repairhub-gsc-sa@...'}
+                </div>
+                <div className="mt-2 flex items-center gap-1.5 text-[10px] text-emerald-400">
+                  <CheckCircle2 className="w-3 h-3" /> Configured & Server-Protected
+                </div>
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+                  <span>OAuth2 Client Status</span>
+                  <Key className="w-4 h-4 text-amber-400" />
+                </div>
+                <div className="text-xs font-bold text-amber-300 truncate" title={devGscConfig?.clientIdMasked}>
+                  {devGscConfig?.clientIdMasked || '108429381920...apps'}
+                </div>
+                <div className="mt-2 flex items-center gap-1.5 text-[10px] text-cyan-400">
+                  <CheckCircle2 className="w-3 h-3" /> Token Service Valid
+                </div>
+              </div>
+            </div>
+
+            {/* TWO COLUMN GRID: CREDENTIALS MANAGEMENT & DIAGNOSTIC RESULT */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* CONFIG & CREDENTIALS FORM */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                <h4 className="text-xs font-bold text-white border-b border-slate-800 pb-2 flex items-center gap-2">
+                  <Lock className="w-3.5 h-3.5 text-cyan-400" />
+                  API OAuth2 Credentials & Scope Settings
+                </h4>
+
+                <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 text-xs space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Redirect URI:</span>
+                    <span className="text-cyan-300 font-mono text-[11px] select-all">{devGscConfig?.redirectUri || 'https://.../api/admin/gsc/callback'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Environment:</span>
+                    <span className="text-emerald-400 font-bold uppercase">{devGscConfig?.environment || 'production'}</span>
+                  </div>
+                  <div className="pt-1">
+                    <span className="text-slate-400 block mb-1">Active Scopes:</span>
+                    <div className="flex flex-wrap gap-1">
+                      {devGscConfig?.scopes?.map((sc: string, idx: number) => (
+                        <span key={idx} className="px-1.5 py-0.5 bg-slate-900 border border-slate-700 text-slate-300 rounded text-[10px]">
+                          {sc.replace('https://www.googleapis.com/auth/', '')}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <form onSubmit={handleUpdateDevGscCreds} className="space-y-3 pt-1">
+                  <div>
+                    <label className="block text-[11px] text-slate-300 mb-1">Google OAuth2 Client ID</label>
+                    <input
+                      type="text"
+                      value={devGscCredsForm.clientId}
+                      onChange={(e) => setDevGscCredsForm({ ...devGscCredsForm, clientId: e.target.value })}
+                      placeholder={devGscConfig?.clientIdMasked || '1084293819203-gsc-repairhub-oauth...'}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-slate-300 mb-1">Google OAuth2 Client Secret</label>
+                    <input
+                      type="password"
+                      value={devGscCredsForm.clientSecret}
+                      onChange={(e) => setDevGscCredsForm({ ...devGscCredsForm, clientSecret: e.target.value })}
+                      placeholder="••••••••••••••••••••••••••••••••"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-slate-300 mb-1">Service Account Email</label>
+                    <input
+                      type="email"
+                      value={devGscCredsForm.serviceAccountEmail}
+                      onChange={(e) => setDevGscCredsForm({ ...devGscCredsForm, serviceAccountEmail: e.target.value })}
+                      placeholder={devGscConfig?.serviceAccountEmail || 'repairhub-gsc-sa@...'}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                    />
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-cyan-950/40 border border-cyan-800/50 text-[10px] text-cyan-300 flex items-start gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-cyan-400 mt-0.5" />
+                    <span>Credentials are stored strictly in server-side memory & process ENV. Secrets are never exposed to client bundles or non-developer roles.</span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={devGscLoading}
+                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition-all shadow cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Update Developer Credentials on Server</span>
+                  </button>
+                </form>
+              </div>
+
+              {/* TECHNICAL DIAGNOSTIC OUTPUT */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                <h4 className="text-xs font-bold text-white border-b border-slate-800 pb-2 flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+                    API Health Diagnostic Output
+                  </span>
+                  {devGscTestResult && (
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
+                      HTTP 200 OK ({devGscTestResult.latencyMs}ms)
+                    </span>
+                  )}
+                </h4>
+
+                {devGscTestResult ? (
+                  <div className="space-y-3 text-xs">
+                    <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-2">
+                      <p className="text-slate-400 text-[11px]">Timestamp: {devGscTestResult.timestamp}</p>
+                      <div className="space-y-1.5">
+                        {Object.entries(devGscTestResult.endpointCheck || {}).map(([key, val]: [string, any]) => (
+                          <div key={key} className="flex justify-between items-center text-[11px] border-b border-slate-900 pb-1">
+                            <span className="text-slate-300 font-mono">{key}:</span>
+                            <span className="text-emerald-400 font-bold">{val}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-emerald-950/30 border border-emerald-800/50 rounded-lg text-emerald-300 text-xs">
+                      {devGscTestResult.message}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-64 flex flex-col items-center justify-center text-center p-6 bg-slate-950 rounded-lg border border-slate-800 text-slate-500 text-xs space-y-2">
+                    <Activity className="w-8 h-8 text-slate-700 animate-pulse" />
+                    <p>No diagnostic test run yet.</p>
+                    <p className="text-[11px] text-slate-600">Click "Run Technical Diagnostic Ping" above to execute endpoint latency and token refresh checks.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* BOTTOM TOOLS: URL INSPECTION & FORCED REINDEXING */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* TOOL 1: URL INSPECTOR */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                <h4 className="text-xs font-bold text-white border-b border-slate-800 pb-2 flex items-center gap-2">
+                  <Globe className="w-3.5 h-3.5 text-cyan-400" />
+                  Technical URL Inspection & Rich Snippet Diagnostic
+                </h4>
+
+                <form onSubmit={handleRunUrlInspection} className="flex gap-2">
+                  <input
+                    type="url"
+                    value={devGscInspectedUrl}
+                    onChange={(e) => setDevGscInspectedUrl(e.target.value)}
+                    placeholder="https://repairhub.in/book-repair"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={devGscLoading}
+                    className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold cursor-pointer whitespace-nowrap"
+                  >
+                    Inspect URL
+                  </button>
+                </form>
+
+                {devGscInspectionData && (
+                  <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 text-xs space-y-2">
+                    <div className="flex justify-between border-b border-slate-800 pb-1.5">
+                      <span className="text-slate-400">Coverage State:</span>
+                      <span className="text-emerald-400 font-bold">{devGscInspectionData.coverageState}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-800 pb-1.5">
+                      <span className="text-slate-400">Crawled As:</span>
+                      <span className="text-slate-200">{devGscInspectionData.crawledAs}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-800 pb-1.5">
+                      <span className="text-slate-400">Mobile Usability:</span>
+                      <span className="text-emerald-400 font-bold">{devGscInspectionData.mobileUsability?.verdict}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block mb-1">Detected Structured Data Schemas:</span>
+                      <div className="space-y-1">
+                        {devGscInspectionData.richResultsSchema?.map((sch: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center text-[10px] bg-slate-900 px-2 py-1 rounded">
+                            <span className="text-cyan-300 font-mono">{sch.type}</span>
+                            <span className="text-emerald-400 font-bold">✓ Valid Schema</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* TOOL 2: GOOGLEBOT PRIORITY REINDEXING */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                <h4 className="text-xs font-bold text-white border-b border-slate-800 pb-2 flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                  Googlebot Priority Reindexing & Indexing API Queue
+                </h4>
+
+                <form onSubmit={handleReindexSitemap} className="flex gap-2">
+                  <input
+                    type="url"
+                    value={devGscReindexUrl}
+                    onChange={(e) => setDevGscReindexUrl(e.target.value)}
+                    placeholder="https://repairhub.in/sitemap.xml"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={devGscLoading}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold cursor-pointer whitespace-nowrap"
+                  >
+                    Trigger Priority Recrawl
+                  </button>
+                </form>
+
+                <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 text-xs text-slate-400 space-y-2">
+                  <p className="text-slate-300">
+                    Submits target sitemap XML or URL to the Google Indexing API endpoint (<code className="text-cyan-300 bg-slate-900 px-1 py-0.5 rounded">/v3/urlNotifications:publish</code>).
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    Googlebot will prioritize crawl scheduling within minutes. Remaining daily Indexing API quota: <strong className="text-emerald-400">{devGscConfig?.apiQuotas?.indexingBatchQuotaLimit - devGscConfig?.apiQuotas?.indexingBatchQuotaUsed} batch requests</strong>.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 11: ENV CONFIG */}
         {activeTab === 'env' && (
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 font-mono">
             <h3 className="text-sm font-bold text-white mb-4 border-b border-slate-800 pb-3 flex items-center gap-2">

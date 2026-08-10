@@ -2,6 +2,7 @@ import React from 'react';
 import { Sparkles, Clock, ShieldCheck, Headphones, Wrench, CheckCircle2, ArrowRight, UserPlus, LogIn } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { UserRole } from '../types';
+import officialLogo from '../assets/images/repairhub_official_logo_1785558519209.jpg';
 
 interface HeroSectionProps {
   onOpenBooking: () => void;
@@ -152,11 +153,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           <div className="lg:col-span-5 relative flex justify-center items-center">
             <div className="relative mx-auto w-full max-w-md lg:max-w-lg rounded-3xl overflow-hidden border border-blue-500/40 bg-slate-950 shadow-2xl shadow-blue-500/25 group p-3">
               <img
-                src="/logo.jpg"
+                src={officialLogo}
                 alt="RepairHub Official Logo"
                 className="w-full h-auto object-contain rounded-2xl transform group-hover:scale-102 transition-transform duration-500 bg-black"
                 onError={(e) => {
-                  if (e.currentTarget.src.includes('/logo.jpg')) {
+                  if (e.currentTarget.src !== '/logo.jpg') {
+                    e.currentTarget.src = '/logo.jpg';
+                  } else if (e.currentTarget.src !== '/logo.png') {
                     e.currentTarget.src = '/logo.png';
                   }
                 }}

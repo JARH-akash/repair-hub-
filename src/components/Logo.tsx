@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Wrench } from 'lucide-react';
+import officialLogo from '../assets/images/repairhub_official_logo_1785558519209.jpg';
 
 interface LogoProps {
   className?: string;
@@ -37,11 +38,13 @@ export const Logo: React.FC<LogoProps> = ({
       >
         {!imgError ? (
           <img
-            src="/logo.jpg"
-            alt="RepairHub Logo Est. 2026"
+            src={officialLogo}
+            alt="RepairHub Official Logo Est. 2026"
             className={imgClassName}
             onError={(e) => {
-              if (e.currentTarget.src.includes('/logo.jpg')) {
+              if (e.currentTarget.src !== '/logo.jpg') {
+                e.currentTarget.src = '/logo.jpg';
+              } else if (e.currentTarget.src !== '/logo.png') {
                 e.currentTarget.src = '/logo.png';
               } else {
                 setImgError(true);
