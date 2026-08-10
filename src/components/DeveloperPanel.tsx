@@ -56,8 +56,8 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
   // Auth state
   const [devToken, setDevToken] = useState<string>(() => localStorage.getItem('repairhub_dev_token') || '');
   const [devEmail, setDevEmail] = useState<string>('bimal8514samanta@gmail.com');
-  const [devPin, setDevPin] = useState<string>('Akash@2004');
-  const [code2FA, setCode2FA] = useState<string>('990088');
+  const [devPin, setDevPin] = useState<string>('');
+  const [code2FA, setCode2FA] = useState<string>('');
   const [requires2FA, setRequires2FA] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string>('');
   const [authLoading, setAuthLoading] = useState<boolean>(false);
@@ -162,23 +162,31 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
     }
   };
 
+  // Validate developer token on mount or token change
+  useEffect(() => {
+    if (devToken) {
+      api.validateDevToken(devToken)
+        .then((res) => {
+          if (res && res.user) {
+            setDevUser(res.user);
+            loadDevData();
+          }
+        })
+        .catch((err) => {
+          console.warn('Developer session token validation failed:', err);
+          setDevToken('');
+          localStorage.removeItem('repairhub_dev_token');
+          setAuthError('Unauthorized session or token expired. Access restricted to bimal8514samanta@gmail.com.');
+        });
+    }
+  }, [devToken]);
+
   // Fetch data when authenticated
   const loadDevData = async () => {
     if (!devToken) return;
     setLoadingData(true);
     try {
-      const [
-        ovRes,
-        srvRes,
-        dbRes,
-        apiRes,
-        payRes,
-        secRes,
-        bakRes,
-        ffRes,
-        envRes,
-        gscRes,
-      ] = await Promise.allSettled([
+      const results = await Promise.allSettled([
         api.getDevOverview(devToken),
         api.getDevServerMetrics(devToken),
         api.getDevDbMetrics(devToken),
@@ -190,6 +198,37 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
         api.getDevEnvConfig(devToken),
         api.getDevGscConfig(devToken),
       ]);
+
+      const [
+        ovRes,
+        srvRes,
+        dbRes,
+        apiRes,
+        payRes,
+        secRes,
+        bakRes,
+        ffRes,
+        envRes,
+        gscRes,
+      ] = results;
+
+      // Check if any request was rejected due to 401/403/Unauthorized
+      const hasAuthFailure = results.some(
+        (r) =>
+          r.status === 'rejected' &&
+          (r.reason?.message?.includes('401') ||
+            r.reason?.message?.includes('403') ||
+            r.reason?.message?.includes('Forbidden') ||
+            r.reason?.message?.includes('Unauthorized') ||
+            r.reason?.message?.includes('ERR_DEV_TOKEN_INVALID'))
+      );
+
+      if (hasAuthFailure) {
+        setDevToken('');
+        localStorage.removeItem('repairhub_dev_token');
+        setAuthError('Session expired or unauthorized. Please log in as bimal8514samanta@gmail.com.');
+        return;
+      }
 
       if (ovRes.status === 'fulfilled') setOverview(ovRes.value);
       if (srvRes.status === 'fulfilled') setServerMetrics(srvRes.value);
@@ -203,11 +242,9 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
       if (gscRes.status === 'fulfilled') setDevGscConfig(gscRes.value);
     } catch (e: any) {
       console.error('Failed loading dev panel data:', e);
-      if (e.message?.includes('403') || e.message?.includes('Forbidden')) {
-        setDevToken('');
-        localStorage.removeItem('repairhub_dev_token');
-        setAuthError('Session expired or revoked. Please re-authenticate.');
-      }
+      setDevToken('');
+      localStorage.removeItem('repairhub_dev_token');
+      setAuthError('Session expired or revoked. Please re-authenticate.');
     } finally {
       setLoadingData(false);
     }
@@ -471,7 +508,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
                   value={devPin}
                   onChange={(e) => setDevPin(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
-                  placeholder="Akash@2004"
+                  placeholder="Enter developer password"
                   required
                 />
               </div>
@@ -505,7 +542,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
                   <Lock className="w-4 h-4 text-cyan-400" /> 2-Factor Authentication Required
                 </p>
                 <p className="text-[11px] text-cyan-300/80 mt-1">
-                  Open your Authenticator app (or enter code <span className="text-amber-400 font-bold">990088</span> for terminal access).
+                  Open your Authenticator app and enter your 6-digit TOTP code.
                 </p>
               </div>
 
@@ -517,7 +554,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({ onClose }) => {
                   value={code2FA}
                   onChange={(e) => setCode2FA(e.target.value)}
                   className="w-full bg-slate-950 border border-cyan-500/50 rounded-lg px-3 py-2 text-center text-lg tracking-widest text-emerald-400 focus:outline-none focus:border-cyan-400 font-mono"
-                  placeholder="990088"
+                  placeholder="000000"
                   required
                 />
               </div>

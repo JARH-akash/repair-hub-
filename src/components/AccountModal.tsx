@@ -141,7 +141,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         customer: 'ABRgroupfoundation01.07.2026@gmail.com',
         technician: 'rahul.tech@repairhub.in',
         admin: 'admin@repairhub.in',
-        developer: 'dev.lead@repairhub.in',
+        developer: 'bimal8514samanta@gmail.com',
       };
 
       const res = await api.loginAccount({

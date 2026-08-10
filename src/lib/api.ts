@@ -270,6 +270,10 @@ export const api = {
   // -------------------------------------------------------------
   // DEVELOPER PANEL SECURE API CALLS
   // -------------------------------------------------------------
+  async validateDevToken(token: string): Promise<{ success: boolean; user: UserAccount }> {
+    return fetchJSON('/api/dev/auth/validate', undefined, token);
+  },
+
   async devChallenge(email: string, developerPin: string): Promise<{ success: boolean; requires2FA: boolean; clientIp: string; message: string }> {
     return fetchJSON('/api/dev/auth/challenge', {
       method: 'POST',

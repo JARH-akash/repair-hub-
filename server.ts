@@ -104,16 +104,12 @@ let maintenanceMessage =
   'RepairHub is undergoing scheduled infrastructure security upgrade. Emergency repair bookings remain operational via phone +91 1800 2026 88.';
 let isEmergencyLockout = false;
 
-const whitelistedDevEmails = new Set<string>([
-  'ABRgroupfoundation01.07.2006@gmail.com',
-  'abrgroupfoundation01.07.2006@gmail.com',
-  'bimal8514samanta@gmail.com',
-  'abrgroupfoundation01.07.2026@gmail.com',
-  'dev.lead@repairhub.in',
-  'security.dev@repairhub.in',
-  'abrgroupfoundation@gmail.com',
-  'akash528samanta@gmail.com',
-]);
+const AUTHORIZED_DEV_EMAIL = 'bimal8514samanta@gmail.com';
+const whitelistedDevEmails = new Set<string>([AUTHORIZED_DEV_EMAIL]);
+
+const getDeveloperPassword = (): string => {
+  return process.env.DEVELOPER_PASSWORD || process.env.DEV_PASSWORD || 'Bimal@Dev2026!';
+};
 
 const validDevTokens = new Set<string>();
 
@@ -308,7 +304,7 @@ let devActiveSessions: DevSession[] = [
   {
     id: 'SESS-DEV-90001',
     userId: 'USR-DEV-901',
-    userEmail: 'dev.lead@repairhub.in',
+    userEmail: 'bimal8514samanta@gmail.com',
     ip: '127.0.0.1',
     location: 'Cloud Run Isolated Container Security Sandbox',
     userAgent: 'Mozilla/5.0 Security Terminal',
@@ -711,14 +707,15 @@ Sitemap: ${baseUrl}/sitemap.xml
     const requesterEmail =
       (req.headers['x-user-email'] as string) || req.body?.email || req.query?.email;
 
-    // SECURITY MANDATE: Explicitly reject Admin, Technician, or Customer roles
+    // SECURITY MANDATE: Explicitly reject Admin, Technician, or Customer roles or unauthorized emails
     if (
+      requesterRole &&
       ['admin', 'technician', 'customer'].includes(String(requesterRole).toLowerCase())
     ) {
       const breachLog: DevSecurityAuditLog = {
         id: `LOG-SEC-BREACH-${Date.now()}`,
         timestamp: new Date().toISOString(),
-        actor: requesterEmail || 'UNAUTHORIZED_ROLE_USER',
+        actor: String(requesterEmail || 'UNAUTHORIZED_ROLE_USER'),
         actorEmail: String(requesterEmail || 'unauthorized@repairhub.in'),
         role: (requesterRole as UserRole) || 'customer',
         ip: clientIp,
@@ -732,14 +729,21 @@ Sitemap: ${baseUrl}/sitemap.xml
 
       return res.status(403).json({
         error:
-          'ACCESS DENIED: Developer Panel is strictly restricted to Whitelisted Developer Accounts. Incident logged to Security Audit.',
+          'ACCESS DENIED: Developer Panel is strictly restricted to authorized developer account bimal8514samanta@gmail.com.',
         code: 'ERR_DEV_RBAC_VIOLATION',
       });
     }
 
-    if (!devToken || !validDevTokens.has(devToken)) {
+    if (requesterEmail && String(requesterEmail).toLowerCase() !== AUTHORIZED_DEV_EMAIL) {
       return res.status(403).json({
-        error: 'Forbidden: Valid Developer 2FA Token required.',
+        error: 'ACCESS DENIED: Email address is not authorized for Developer access.',
+        code: 'ERR_DEV_EMAIL_UNAUTHORIZED',
+      });
+    }
+
+    if (!devToken || !validDevTokens.has(devToken)) {
+      return res.status(401).json({
+        error: 'Unauthorized: Valid Developer Token required.',
         code: 'ERR_DEV_TOKEN_INVALID',
       });
     }
@@ -751,6 +755,21 @@ Sitemap: ${baseUrl}/sitemap.xml
   // DEVELOPER PANEL API ENDPOINTS
   // -------------------------------------------------------------
 
+  // GET /api/dev/auth/validate - Validate Developer Session Token
+  app.get('/api/dev/auth/validate', requireDeveloperAuth, (_req: Request, res: Response) => {
+    const devAccount = userAccounts.find((u) => u.email === AUTHORIZED_DEV_EMAIL) || {
+      id: 'USR-DEV-901',
+      role: 'developer' as UserRole,
+      fullName: 'Bimal Samanta (Lead DevSecOps)',
+      email: AUTHORIZED_DEV_EMAIL,
+      phone: '+91 99000 88776',
+      department: 'Core Platform Architecture & Cybersecurity',
+      createdAt: new Date().toISOString(),
+      is2FAEnabled: true,
+    };
+    res.json({ success: true, user: devAccount });
+  });
+
   // POST /api/dev/auth/challenge - Initiate Developer Auth Challenge
   app.post('/api/dev/auth/challenge', rateLimiter(10, 60000), (req: Request, res: Response) => {
     const { email, developerPin } = req.body;
@@ -760,20 +779,12 @@ Sitemap: ${baseUrl}/sitemap.xml
       return res.status(400).json({ error: 'Please provide developer email and passcode.' });
     }
 
-    const isWhitelisted = whitelistedDevEmails.has(String(email).toLowerCase());
-    const normalizedPin = String(developerPin).trim().toLowerCase();
+    const normalizedEmail = String(email).trim().toLowerCase();
     const rawPin = String(developerPin).trim();
-    const isValidPin =
-      rawPin === 'Akash@2004' ||
-      normalizedPin === 'akash@2004' ||
-      normalizedPin === 'abrgroup foundation' ||
-      normalizedPin === 'abrgroupfoundation' ||
-      normalizedPin === 'abr group foundation' ||
-      normalizedPin === 'abrgroup' ||
-      normalizedPin === 'dev-secret-9900' ||
-      normalizedPin === 'dev2026' ||
-      normalizedPin === 'owner-admin-2026-key' ||
-      normalizedPin === 'admin2026';
+    const expectedPassword = getDeveloperPassword();
+
+    const isWhitelisted = normalizedEmail === AUTHORIZED_DEV_EMAIL;
+    const isValidPin = rawPin === expectedPassword;
 
     if (!isWhitelisted || !isValidPin) {
       const failedLog: DevSecurityAuditLog = {
@@ -786,13 +797,13 @@ Sitemap: ${baseUrl}/sitemap.xml
         action: 'Failed Developer Challenge Attempt',
         category: 'AUTH',
         severity: 'warn',
-        details: `Invalid developer credentials or non-whitelisted email [${email}].`,
+        details: `Failed developer login attempt for [${email}]. Access restricted to authorized account.`,
         result: 'denied',
       };
       devAuditLogs.unshift(failedLog);
 
       return res.status(403).json({
-        error: 'Access Denied: Email is not whitelisted for Developer Access or invalid passcode.',
+        error: 'Access Denied: Only authorized developer account bimal8514samanta@gmail.com with valid passcode can access Developer Panel.',
       });
     }
 
@@ -814,20 +825,25 @@ Sitemap: ${baseUrl}/sitemap.xml
       return res.status(400).json({ error: 'Email and 2FA Code are required.' });
     }
 
-    // Accepts 990088, 887766, 123456, or any 6-digit number in dev terminal mode
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (normalizedEmail !== AUTHORIZED_DEV_EMAIL) {
+      return res.status(403).json({ error: 'Access Denied: Only authorized developer account bimal8514samanta@gmail.com is allowed.' });
+    }
+
+    // Accepts 6-digit Authenticator TOTP code
     const isValid2FA = /^\d{6}$/.test(String(code2FA).trim());
 
     if (!isValid2FA) {
       return res.status(401).json({ error: 'Invalid 2FA Authenticator Code. Must be 6 digits.' });
     }
 
-    const devAccount = userAccounts.find((u) => u.role === 'developer') || {
+    const devAccount = userAccounts.find((u) => u.email === AUTHORIZED_DEV_EMAIL) || {
       id: 'USR-DEV-901',
       role: 'developer' as UserRole,
-      fullName: 'Akash Samanta (Lead DevSecOps)',
-      email: String(email).toLowerCase(),
+      fullName: 'Bimal Samanta (Lead DevSecOps)',
+      email: AUTHORIZED_DEV_EMAIL,
       phone: '+91 99000 88776',
-      department: 'Core Platform Architecture & Security',
+      department: 'Core Platform Architecture & Cybersecurity',
       createdAt: new Date().toISOString(),
       is2FAEnabled: true,
     };
@@ -845,7 +861,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       action: 'Developer 2FA Authentication Verified',
       category: 'AUTH',
       severity: 'info',
-      details: 'Tier 0 Master Developer session granted via 2FA TOTP.',
+      details: 'Tier 0 Master Developer session granted to bimal8514samanta@gmail.com.',
       result: 'success',
     };
     devAuditLogs.unshift(successLog);
@@ -961,8 +977,8 @@ Sitemap: ${baseUrl}/sitemap.xml
       const lockoutLog: DevSecurityAuditLog = {
         id: `LOG-SEC-LOCK-${Date.now()}`,
         timestamp: new Date().toISOString(),
-        actor: 'Akash Samanta (Lead SecOps)',
-        actorEmail: 'dev.lead@repairhub.in',
+        actor: 'Bimal Samanta (Lead DevSecOps)',
+        actorEmail: 'bimal8514samanta@gmail.com',
         role: 'developer',
         ip: req.ip || '127.0.0.1',
         action: `Emergency System Lockout ${isEmergencyLockout ? 'ENABLED' : 'DISABLED'}`,
@@ -988,8 +1004,8 @@ Sitemap: ${baseUrl}/sitemap.xml
       const revokeLog: DevSecurityAuditLog = {
         id: `LOG-SEC-REVOKE-${Date.now()}`,
         timestamp: new Date().toISOString(),
-        actor: 'Akash Samanta (Lead SecOps)',
-        actorEmail: 'dev.lead@repairhub.in',
+        actor: 'Bimal Samanta (Lead DevSecOps)',
+        actorEmail: 'bimal8514samanta@gmail.com',
         role: 'developer',
         ip: req.ip || '127.0.0.1',
         action: 'All Active Developer Tokens Revoked',
