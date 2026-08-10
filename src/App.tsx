@@ -32,21 +32,29 @@ export default function App() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('register');
 
   useEffect(() => {
-    // Remove any #developer hash or dev query param from URL if present
-    const stripDevHash = () => {
+    // Check and trigger Developer Panel on direct navigation (#developer, /developer, ?dev=true)
+    const checkDevRoute = () => {
+      const hash = window.location.hash.toLowerCase();
+      const search = window.location.search.toLowerCase();
+      const path = window.location.pathname.toLowerCase();
+
       if (
-        window.location.hash.includes('developer') ||
-        window.location.hash.includes('dev') ||
-        window.location.search.includes('developer=true') ||
-        window.location.search.includes('dev=true')
+        hash.includes('developer') ||
+        hash.includes('dev') ||
+        search.includes('developer=true') ||
+        search.includes('dev=true') ||
+        path.startsWith('/developer') ||
+        path.startsWith('/dev')
       ) {
+        setIsDevPanelOpen(true);
         if (window.history && window.history.replaceState) {
-          window.history.replaceState(null, '', window.location.pathname);
+          window.history.replaceState(null, '', '/');
         }
       }
     };
-    stripDevHash();
-    window.addEventListener('hashchange', stripDevHash);
+    checkDevRoute();
+    window.addEventListener('hashchange', checkDevRoute);
+    window.addEventListener('popstate', checkDevRoute);
 
     // Global Key Combination Listener for Developer Terminal ONLY via (Ctrl + Shift + A)
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -71,7 +79,8 @@ export default function App() {
     }
 
     return () => {
-      window.removeEventListener('hashchange', stripDevHash);
+      window.removeEventListener('hashchange', checkDevRoute);
+      window.removeEventListener('popstate', checkDevRoute);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);

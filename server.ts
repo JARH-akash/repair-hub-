@@ -2175,6 +2175,13 @@ Respond strictly in valid JSON matching this schema:
   });
 
   // -------------------------------------------------------------
+  // API ROUTE CATCH-ALL (404 JSON RESPONSE FOR UNKNOWN API ENDPOINTS)
+  // -------------------------------------------------------------
+  app.all('/api/*', (_req: Request, res: Response) => {
+    res.status(404).json({ error: 'API route not found', path: _req.path });
+  });
+
+  // -------------------------------------------------------------
   // VITE DEVELOPMENT & PRODUCTION STATIC SERVING
   // -------------------------------------------------------------
 

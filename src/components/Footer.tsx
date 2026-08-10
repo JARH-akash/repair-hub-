@@ -79,7 +79,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateSection, onOpenAIDiagn
             <div className="flex flex-col items-center justify-center gap-2.5 text-center">
               {/* First line: Developer Credit */}
               <p className="text-[15px] font-bold text-blue-400 tracking-tight">
-                Website Developed by Akash Samanta
+                <a href="#developer" className="hover:underline hover:text-blue-300 transition-colors cursor-pointer">
+                  Website Developed by Akash Samanta
+                </a>
               </p>
 
               {/* Second line: Remaining credits using identical text-blue-400 color */}
