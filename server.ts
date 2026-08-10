@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import path from 'path';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import { INITIAL_INVENTORY, INITIAL_REPAIR_JOBS, INITIAL_SUPPORT_TICKETS, INITIAL_TECHNICIANS } from './src/data/mockData.js';
@@ -107,8 +108,36 @@ let isEmergencyLockout = false;
 const AUTHORIZED_DEV_EMAIL = 'bimal8514samanta@gmail.com';
 const whitelistedDevEmails = new Set<string>([AUTHORIZED_DEV_EMAIL]);
 
-const getDeveloperPassword = (): string => {
-  return process.env.DEVELOPER_PASSWORD || process.env.DEV_PASSWORD || 'Bimal@Dev2026!';
+const verifyDeveloperPasscode = (inputPin: string): boolean => {
+  if (!inputPin) return false;
+  const cleanPin = String(inputPin).trim();
+  const inputHash = crypto.createHash('sha256').update(cleanPin).digest('hex');
+
+  const envPass = process.env.DEVELOPER_PASSWORD || process.env.DEV_PASSWORD;
+  if (envPass) {
+    const envHash = crypto.createHash('sha256').update(envPass.trim()).digest('hex');
+    try {
+      return crypto.timingSafeEqual(Buffer.from(inputHash, 'hex'), Buffer.from(envHash, 'hex'));
+    } catch {
+      return false;
+    }
+  }
+
+  const envHash = process.env.DEVELOPER_PASSWORD_HASH;
+  if (envHash) {
+    try {
+      return crypto.timingSafeEqual(Buffer.from(inputHash, 'hex'), Buffer.from(envHash.trim().toLowerCase(), 'hex'));
+    } catch {
+      return false;
+    }
+  }
+
+  const defaultHash = '2cfb62fd6b97b75649b25af1db3c7aae97c5ea68002da6094362e1ca3be70305';
+  try {
+    return crypto.timingSafeEqual(Buffer.from(inputHash, 'hex'), Buffer.from(defaultHash, 'hex'));
+  } catch {
+    return false;
+  }
 };
 
 const validDevTokens = new Set<string>();
@@ -781,10 +810,9 @@ Sitemap: ${baseUrl}/sitemap.xml
 
     const normalizedEmail = String(email).trim().toLowerCase();
     const rawPin = String(developerPin).trim();
-    const expectedPassword = getDeveloperPassword();
 
     const isWhitelisted = normalizedEmail === AUTHORIZED_DEV_EMAIL;
-    const isValidPin = rawPin === expectedPassword;
+    const isValidPin = verifyDeveloperPasscode(rawPin);
 
     if (!isWhitelisted || !isValidPin) {
       const failedLog: DevSecurityAuditLog = {
@@ -2011,7 +2039,7 @@ Respond strictly in valid JSON matching this schema:
       }
 
       const geminiResponse = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: 'gemini-2.5-flash',
         contents: contentsPayload,
         config: {
           responseMimeType: 'application/json',
