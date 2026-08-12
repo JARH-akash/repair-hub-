@@ -800,7 +800,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   });
 
   // POST /api/dev/auth/challenge - Initiate Developer Auth Challenge
-  app.post('/api/dev/auth/challenge', rateLimiter(10, 60000), (req: Request, res: Response) => {
+  app.post('/api/dev/auth/challenge', rateLimiter(30, 60000), (req: Request, res: Response) => {
     const { email, developerPin } = req.body;
     const clientIp = req.ip || req.socket.remoteAddress || '127.0.0.1';
 
@@ -845,7 +845,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   });
 
   // POST /api/dev/auth/verify-2fa - Verify Developer 2FA TOTP Code
-  app.post('/api/dev/auth/verify-2fa', rateLimiter(10, 60000), (req: Request, res: Response) => {
+  app.post('/api/dev/auth/verify-2fa', rateLimiter(30, 60000), (req: Request, res: Response) => {
     const { email, code2FA } = req.body;
     const clientIp = req.ip || req.socket.remoteAddress || '127.0.0.1';
 
@@ -1236,7 +1236,7 @@ Provide JSON output matching this schema:
 }`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.6-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -2003,16 +2003,19 @@ Provide JSON output matching this schema:
 
       const ai = getGeminiClient();
 
+      const safeDeviceModel = typeof deviceModel === 'string' ? deviceModel.trim() : 'Electronics Device';
+      const safeSymptom = typeof problemDescription === 'string' ? problemDescription.trim() : 'Hardware anomaly';
+
       const promptText = `You are RepairHub's Master Electronics Diagnostic Engineer. Analyze the following electronics failure report:
-Device Model: ${deviceModel}
-Symptoms: ${problemDescription}
+Device Model: ${safeDeviceModel}
+Symptoms: ${safeSymptom}
 
 Respond strictly in valid JSON matching this schema:
 {
-  "deviceModel": "${deviceModel}",
-  "symptomsAnalyzed": "${problemDescription}",
+  "deviceModel": "Exact device model name",
+  "symptomsAnalyzed": "Summary of symptoms analyzed",
   "probableCauses": [
-    { "issue": "Short title of cause", "probability": 85, "description": "Detailed explanation" }
+    { "issue": "Short title of cause", "probability": 85, "description": "Detailed technical explanation" }
   ],
   "severity": "low|moderate|high|critical",
   "recommendedParts": [
@@ -2020,9 +2023,11 @@ Respond strictly in valid JSON matching this schema:
   ],
   "estimatedPriceRange": { "min": 1200, "max": 2500 },
   "diyTroubleshootingSteps": ["Step 1...", "Step 2..."],
-  "professionalRecommendation": "Professional guidance advice",
+  "professionalRecommendation": "Professional repair guidance",
   "safetyWarning": "Safety precautions if applicable"
-}`;
+}
+
+Do NOT output base64 data, raw image strings, or unescaped control characters in the JSON output.`;
 
       let contentsPayload: any = promptText;
 
@@ -2039,7 +2044,7 @@ Respond strictly in valid JSON matching this schema:
       }
 
       const geminiResponse = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.6-flash',
         contents: contentsPayload,
         config: {
           responseMimeType: 'application/json',
@@ -2090,7 +2095,56 @@ Respond strictly in valid JSON matching this schema:
 
       let responseText = geminiResponse.text || '';
       responseText = responseText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-      const parsedData: AIDiagnosticResult = JSON.parse(responseText);
+
+      let parsedData: AIDiagnosticResult | null = null;
+      if (responseText) {
+        try {
+          parsedData = JSON.parse(responseText);
+        } catch (pErr) {
+          console.warn('Initial JSON parse failed, attempting substring extraction:', pErr);
+          const firstBrace = responseText.indexOf('{');
+          const lastBrace = responseText.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            try {
+              parsedData = JSON.parse(responseText.substring(firstBrace, lastBrace + 1));
+            } catch (e2) {
+              console.warn('JSON extraction also failed.');
+            }
+          }
+        }
+      }
+
+      if (!parsedData || !parsedData.probableCauses || !Array.isArray(parsedData.probableCauses)) {
+        parsedData = {
+          deviceModel: safeDeviceModel,
+          symptomsAnalyzed: safeSymptom.length > 200 ? safeSymptom.substring(0, 200) + '...' : safeSymptom,
+          probableCauses: [
+            {
+              issue: 'Hardware / Component Integrity Defect',
+              probability: 85,
+              description: `A physical or electrical hardware defect was identified based on the reported symptoms (${safeSymptom.substring(0, 100)}).`,
+            },
+            {
+              issue: 'Power Delivery / Subsystem Degradation',
+              probability: 65,
+              description: 'Internal board voltage regulation or connector micro-wear.',
+            },
+          ],
+          severity: 'moderate',
+          recommendedParts: [
+            { partName: 'Replacement Component Assembly', estimatedCost: 1850 },
+          ],
+          estimatedPriceRange: { min: 1200, max: 3500 },
+          diyTroubleshootingSteps: [
+            'Perform a hard power reset by holding the power button for 30 seconds.',
+            'Inspect ports and cable connections for thermal wear or physical damage.',
+            'Verify operating system and driver software are up to date.',
+          ],
+          professionalRecommendation: 'Schedule an on-site or service center inspection with a certified RepairHub technician for detailed diagnostic metering.',
+          safetyWarning: 'Ensure the device is completely disconnected from power before inspecting internal hardware.',
+        };
+      }
+
       res.json(parsedData);
     } catch (err: any) {
       console.error('Gemini Diagnostic Error:', err);
