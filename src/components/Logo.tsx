@@ -38,14 +38,17 @@ export const Logo: React.FC<LogoProps> = ({
       >
         {!imgError ? (
           <img
-            src={officialLogo}
+            src="/logo.png"
             alt="RepairHub Official Logo Est. 2026"
             className={imgClassName}
             onError={(e) => {
-              if (e.currentTarget.src !== '/logo.jpg') {
-                e.currentTarget.src = '/logo.jpg';
-              } else if (e.currentTarget.src !== '/logo.png') {
-                e.currentTarget.src = '/logo.png';
+              const target = e.currentTarget;
+              if (!target.dataset.triedOfficial) {
+                target.dataset.triedOfficial = 'true';
+                target.src = officialLogo;
+              } else if (!target.dataset.triedJpg) {
+                target.dataset.triedJpg = 'true';
+                target.src = '/logo.jpg';
               } else {
                 setImgError(true);
               }

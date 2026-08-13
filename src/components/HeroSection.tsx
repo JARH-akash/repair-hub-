@@ -153,14 +153,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           <div className="lg:col-span-5 relative flex justify-center items-center">
             <div className="relative mx-auto w-full max-w-md lg:max-w-lg rounded-3xl overflow-hidden border border-blue-500/40 bg-slate-950 shadow-2xl shadow-blue-500/25 group p-3">
               <img
-                src={officialLogo}
+                src="/logo.png"
                 alt="RepairHub Official Logo"
                 className="w-full h-auto object-contain rounded-2xl transform group-hover:scale-102 transition-transform duration-500 bg-black"
                 onError={(e) => {
-                  if (e.currentTarget.src !== '/logo.jpg') {
-                    e.currentTarget.src = '/logo.jpg';
-                  } else if (e.currentTarget.src !== '/logo.png') {
-                    e.currentTarget.src = '/logo.png';
+                  const target = e.currentTarget;
+                  if (!target.dataset.triedOfficial) {
+                    target.dataset.triedOfficial = 'true';
+                    target.src = officialLogo;
+                  } else if (!target.dataset.triedJpg) {
+                    target.dataset.triedJpg = 'true';
+                    target.src = '/logo.jpg';
                   }
                 }}
                 referrerPolicy="no-referrer"

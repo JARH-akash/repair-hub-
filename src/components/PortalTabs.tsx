@@ -771,7 +771,7 @@ export const PortalTabs: React.FC<PortalTabsProps> = ({
                             <Eye className="w-3.5 h-3.5" /> View
                           </button>
                           <a
-                            href="/logo.jpg"
+                            href="/logo.png"
                             download={doc.fileName}
                             className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg flex items-center gap-1 cursor-pointer"
                             id={`download-doc-${doc.id}`}
